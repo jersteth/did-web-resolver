@@ -45,7 +45,7 @@ const DEFAULT_KEY_MAP = {
   keyAgreement: 'X25519KeyAgreementKey2020'
 };
 
-function didFromUrl ({ url } = {}) {
+export function didFromUrl ({ url } = {}) {
   if (!url) {
     throw new TypeError('Cannot convert url to did, missing url.')
   }
@@ -71,7 +71,7 @@ function didFromUrl ({ url } = {}) {
   return 'did:web:' + encodeURIComponent(host) + pathComponent
 }
 
-function urlFromDid ({ did } = {}) {
+export function urlFromDid ({ did } = {}) {
   if (!did) {
     throw new TypeError('Cannot convert did to url, missing did.')
   }
@@ -173,7 +173,7 @@ async function initKeys ({ didDocument, cryptoLd, keyMap } = {}) {
   return { didDocument: doc, keyPairs }
 }
 
-class DidWebResolver {
+export class DidWebResolver {
   /**
    * @param cryptoLd {CryptoLD}
    * @param keyMap {object}
