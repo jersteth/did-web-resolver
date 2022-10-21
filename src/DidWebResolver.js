@@ -1,12 +1,41 @@
-import { httpClient } from '@digitalcredentials/http-client'
-import * as didIo from '@digitalcredentials/did-io'
-import ed25519Context from 'ed25519-signature-2020-context'
-import x25519Context from 'x25519-key-agreement-2020-context'
-import didContext from 'did-context'
-import { decodeSecretKeySeed } from '@digitalcredentials/bnid'
-import { URL } from 'whatwg-url'
+'use strict';
 
-const { VERIFICATION_RELATIONSHIPS } = didIo
+Object.defineProperty(exports, '__esModule', { value: true });
+
+var httpClient = require('@digitalcredentials/http-client');
+var didIo = require('@digitalcredentials/did-io');
+var ed25519Context = require('ed25519-signature-2020-context');
+var x25519Context = require('x25519-key-agreement-2020-context');
+var didContext = require('did-context');
+var bnid = require('@digitalcredentials/bnid');
+var whatwgUrl = require('whatwg-url');
+
+function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'default' in e ? e : { 'default': e }; }
+
+function _interopNamespace(e) {
+  if (e && e.__esModule) return e;
+  var n = Object.create(null);
+  if (e) {
+    Object.keys(e).forEach(function (k) {
+      if (k !== 'default') {
+        var d = Object.getOwnPropertyDescriptor(e, k);
+        Object.defineProperty(n, k, d.get ? d : {
+          enumerable: true,
+          get: function () { return e[k]; }
+        });
+      }
+    });
+  }
+  n["default"] = e;
+  return Object.freeze(n);
+}
+
+var didIo__namespace = /*#__PURE__*/_interopNamespace(didIo);
+var ed25519Context__default = /*#__PURE__*/_interopDefaultLegacy(ed25519Context);
+var x25519Context__default = /*#__PURE__*/_interopDefaultLegacy(x25519Context);
+var didContext__default = /*#__PURE__*/_interopDefaultLegacy(didContext);
+
+const { VERIFICATION_RELATIONSHIPS } = didIo__namespace;
 
 const DEFAULT_KEY_MAP = {
   capabilityInvocation: 'Ed25519VerificationKey2020',
@@ -14,9 +43,9 @@ const DEFAULT_KEY_MAP = {
   assertionMethod: 'Ed25519VerificationKey2020',
   capabilityDelegation: 'Ed25519VerificationKey2020',
   keyAgreement: 'X25519KeyAgreementKey2020'
-}
+};
 
-export function didFromUrl ({ url } = {}) {
+function didFromUrl ({ url } = {}) {
   if (!url) {
     throw new TypeError('Cannot convert url to did, missing url.')
   }
@@ -24,24 +53,25 @@ export function didFromUrl ({ url } = {}) {
     throw new TypeError('did:web does not support non-HTTPS URLs.')
   }
 
-  let parsedUrl
+  let parsedUrl;
   try {
-    parsedUrl = new URL(url)
+    parsedUrl = new whatwgUrl.URL(url);
   } catch (error) {
     throw new TypeError(`Invalid url: "${url}".`)
   }
 
-  const { host, pathname } = parsedUrl
+  const { host, pathname } = parsedUrl;
 
-  let pathComponent = ''
+  let pathComponent = '';
   if (pathname && pathname !== '/' && pathname !== '/.well-known/did.json') {
-    pathComponent = pathname.split('/').map(encodeURIComponent).join(':')
+    const leftPart = pathname.split("/did.json")[0];
+    pathComponent = leftPart.split('/').map(encodeURIComponent).join(':');
   }
 
   return 'did:web:' + encodeURIComponent(host) + pathComponent
 }
 
-export function urlFromDid ({ did } = {}) {
+function urlFromDid ({ did } = {}) {
   if (!did) {
     throw new TypeError('Cannot convert did to url, missing did.')
   }
@@ -49,34 +79,34 @@ export function urlFromDid ({ did } = {}) {
     throw new TypeError(`DID Method not supported: "${did}".`)
   }
 
-  const [didUrl, hashFragment] = did.split('#')
+  const [didUrl, hashFragment] = did.split('#');
   // eslint-disable-next-line no-unused-vars
   // const [didResource, query] = didUrl.split('?')
 
   // eslint-disable-next-line no-unused-vars
-  const [_did, _web, urlNoProtocol, ...pathFragments] = didUrl.split(':')
+  const [_did, _web, urlNoProtocol, ...pathFragments] = didUrl.split(':');
 
   if (urlNoProtocol.includes('/')) {
     throw new TypeError(`Cannot construct url from did: "${did}". domain-name cannot contain a path.`)
   }
 
-  let parsedUrl
+  let parsedUrl;
   try {
     // URI-decode the url (in case it contained a port number,
     // for example, `did:web:localhost%3A8080`
-    parsedUrl = new URL('https://' + decodeURIComponent(urlNoProtocol))
+    parsedUrl = new whatwgUrl.URL('https://' + decodeURIComponent(urlNoProtocol));
   } catch (error) {
     throw new TypeError(`Cannot construct url from did: "${did}".`)
   }
 
   if (pathFragments.length === 0) {
-    parsedUrl.pathname = '/.well-known/did.json'
+    parsedUrl.pathname = '/.well-known/did.json';
   } else {
-    parsedUrl.pathname = pathFragments.map(decodeURIComponent).join('/') + '/did.json'
+    parsedUrl.pathname = pathFragments.map(decodeURIComponent).join('/') + '/did.json';
   }
 
   if (hashFragment) {
-    parsedUrl.hash = hashFragment
+    parsedUrl.hash = hashFragment;
   }
   return parsedUrl.toString()
 }
@@ -108,42 +138,42 @@ export function urlFromDid ({ did } = {}) {
  *   DID Document initialized with keys, as well as the map of the corresponding
  *   key pairs (by key id).
  */
-export async function initKeys ({ didDocument, cryptoLd, keyMap } = {}) {
-  const doc = { ...didDocument }
+async function initKeys ({ didDocument, cryptoLd, keyMap } = {}) {
+  const doc = { ...didDocument };
   if (!doc.id) {
     throw new TypeError(
-      'DID Document "id" property is required to initialize keys.')
+        'DID Document "id" property is required to initialize keys.')
   }
 
-  const keyPairs = new Map()
+  const keyPairs = new Map();
 
   // Set the defaults for the created keys (if needed)
-  const options = { controller: doc.id }
+  const options = { controller: doc.id };
 
   for (const purpose in keyMap) {
     if (!VERIFICATION_RELATIONSHIPS.has(purpose)) {
       throw new Error(`Unsupported key purpose: "${purpose}".`)
     }
 
-    let key
+    let key;
     if (typeof keyMap[purpose] === 'string') {
       if (!cryptoLd) {
         throw new Error('Please provide an initialized CryptoLD instance.')
       }
-      key = await cryptoLd.generate({ type: keyMap[purpose], ...options })
+      key = await cryptoLd.generate({ type: keyMap[purpose], ...options });
     } else {
       // An existing key has been provided
-      key = keyMap[purpose]
+      key = keyMap[purpose];
     }
 
-    doc[purpose] = [key.export({ publicKey: true })]
-    keyPairs.set(key.id, key)
+    //doc[purpose] = [key.export({ publicKey: true })];
+    keyPairs.set(key.id, key);
   }
 
   return { didDocument: doc, keyPairs }
 }
 
-export class DidWebResolver {
+class DidWebResolver {
   /**
    * @param cryptoLd {CryptoLD}
    * @param keyMap {object}
@@ -151,10 +181,10 @@ export class DidWebResolver {
    *   etc methods).
    */
   constructor ({ cryptoLd, keyMap = DEFAULT_KEY_MAP, logger = console } = {}) {
-    this.method = 'web' // did:web:... (used for didIo resolver harness)
-    this.cryptoLd = cryptoLd
-    this.keyMap = keyMap
-    this.logger = logger
+    this.method = 'web'; // did:web:... (used for didIo resolver harness)
+    this.cryptoLd = cryptoLd;
+    this.keyMap = keyMap;
+    this.logger = logger;
   }
 
   /**
@@ -188,43 +218,43 @@ export class DidWebResolver {
     }
     if (seed && keyMap) {
       throw new TypeError(
-        'Either a "seed" or a "keyMap" param must be provided, but not both.'
+          'Either a "seed" or a "keyMap" param must be provided, but not both.'
       )
     }
 
-    const did = id || didFromUrl({ url })
+    const did = id || didFromUrl({ url });
 
     if (seed) {
       const keyPair = await _keyPairFromSecretSeed({
         seed, controller: did, cryptoLd
-      })
-      keyMap = { assertionMethod: keyPair }
+      });
+      keyMap = { assertionMethod: keyPair };
     } else {
-      keyMap = keyMap || this.keyMap
+      keyMap = keyMap || this.keyMap;
     }
 
     // Compose the DID Document
     let didDocument = {
       '@context': [
-        didContext.constants.DID_CONTEXT_URL,
-        ed25519Context.constants.CONTEXT_URL,
-        x25519Context.constants.CONTEXT_URL
+        didContext__default["default"].constants.DID_CONTEXT_URL,
+        ed25519Context__default["default"].constants.CONTEXT_URL,
+        x25519Context__default["default"].constants.CONTEXT_URL
       ],
       id: did
-    }
+    };
 
-    const result = await initKeys({ didDocument, cryptoLd, keyMap })
-    const keyPairs = result.keyPairs
-    didDocument = result.didDocument
+    const result = await initKeys({ didDocument, cryptoLd, keyMap });
+    const keyPairs = result.keyPairs;
+    didDocument = result.didDocument;
 
     // Convenience function that returns the public/private key pair instance
     // for a given purpose (authentication, assertionMethod, keyAgreement, etc).
     const methodFor = ({ purpose }) => {
-      const { id: methodId } = didIo.findVerificationMethod({
+      const { id: methodId } = didIo__namespace.findVerificationMethod({
         doc: didDocument, purpose
-      })
+      });
       return keyPairs.get(methodId)
-    }
+    };
 
     return { didDocument, keyPairs, methodFor }
   }
@@ -248,39 +278,47 @@ export class DidWebResolver {
    * @returns {Promise<object>} Plain parsed JSON object of the DID Document.
    */
   async get ({ did, url, agent, logger = this.logger }) {
-    const didUrl = url || urlFromDid({ did })
+    const didUrl = url || urlFromDid({ did });
     if (!didUrl) {
       throw new TypeError('A DID or a URL is required.')
     }
 
-    const [urlAuthority, keyIdFragment] = didUrl.split('#')
+    const [urlAuthority, keyIdFragment] = didUrl.split('#');
 
-    let didDocument
+    let didDocument;
     try {
-      logger.info(`Fetching "${urlAuthority}" via http client.`)
-      const result = await httpClient.get(urlAuthority, { agent })
-      didDocument = result.data
+      logger.info(`Fetching "${urlAuthority}" via http client.`);
+      const result = await httpClient.httpClient.get(urlAuthority, { agent });
+      didDocument = result.data;
     } catch (e) {
       // status is HTTP status code
       // data is JSON error from the server if available
-      const { data, status } = e
-      logger.error(`Http ${status} error:`, data)
+      const { data, status } = e;
+      logger.error(`Http ${status} error:`, data);
       throw e
     }
     if (didDocument && keyIdFragment) {
       // resolve an individual key
       // Keys are expected to have format: <did:web:...>#<keyIdFragment>
-      const didAuthority = didFromUrl({ url: urlAuthority })
-      const methodId = `${didAuthority}#${keyIdFragment}`
-
-      const key = didIo.findVerificationMethod({ doc: didDocument, methodId })
+      const didAuthority = didFromUrl({url: urlAuthority});
+      const methodId = `${didAuthority}#${keyIdFragment}`;
+      const key = didIo__namespace.findVerificationMethod({doc: didDocument, methodId});
       if (!key) {
         throw new Error(`Key id ${methodId} not found.`)
       }
 
-      const keyPair = await this.cryptoLd.from(key)
-
-      return keyPair.export({ publicKey: true, includeContext: true })
+      const keyPair = await this.cryptoLd.from(key);
+      if (keyPair.type === "Bls12381G2Key2020") {
+        let keyPairExported = {
+          id: keyPair.id,
+          type: keyPair.type,
+          controller: keyPair.controller,
+        }
+        keyPair.addEncodedPublicKey(keyPairExported);
+        return keyPairExported;
+      } else {
+        return keyPair.export({publicKey: true, includeContext: true})
+      }
     }
 
     return didDocument
@@ -316,7 +354,7 @@ export class DidWebResolver {
       throw new TypeError('The "purpose" parameter is required.')
     }
 
-    const method = didIo.findVerificationMethod({ doc: didDocument, purpose })
+    const method = didIo__namespace.findVerificationMethod({ doc: didDocument, purpose });
     if (!method) {
       throw new Error(`No verification method found for purpose "${purpose}"`)
     }
@@ -333,17 +371,22 @@ export class DidWebResolver {
  * @return {Promise<LDKeyPair>}
  */
 async function _keyPairFromSecretSeed ({ seed, controller, cryptoLd } = {}) {
-  let seedBytes
+  let seedBytes;
   if (typeof seed === 'string') {
     // Currently only supports base58 multibase / identity multihash encoding.
     if (!seed.startsWith('z1A')) {
       throw new TypeError('"seed" parameter must be a multibase/multihash encoded string, or a Uint8Array.')
     }
-    seedBytes = decodeSecretKeySeed({ secretKeySeed: seed })
+    seedBytes = bnid.decodeSecretKeySeed({ secretKeySeed: seed });
   } else {
-    seedBytes = new Uint8Array(seed)
+    seedBytes = new Uint8Array(seed);
   }
   return cryptoLd.generate({
     controller, seed: seedBytes, type: 'Ed25519VerificationKey2020'
   })
 }
+
+exports.DidWebResolver = DidWebResolver;
+exports.didFromUrl = didFromUrl;
+exports.initKeys = initKeys;
+exports.urlFromDid = urlFromDid;
